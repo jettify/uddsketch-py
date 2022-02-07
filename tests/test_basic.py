@@ -1,7 +1,7 @@
 import numpy as np
 import pytest
 
-from uddsketch import UDDSketch, bucket_to_value, value_to_bucket
+from uddsketch import UDDSketch, _bucket_to_value, _value_to_bucket
 
 
 @pytest.fixture(
@@ -50,6 +50,6 @@ def test_quantile(arr, alpha, quantile):
 def test_value_to_bucket_bucket_to_value(alpha, value):
     gamma: float = (1.0 + alpha) / (1.0 - alpha)
 
-    b = value_to_bucket(value, gamma)
-    val = bucket_to_value(alpha, gamma, b)
+    b = _value_to_bucket(value, gamma)
+    val = _bucket_to_value(alpha, gamma, b)
     assert val == pytest.approx(value, rel=alpha)
