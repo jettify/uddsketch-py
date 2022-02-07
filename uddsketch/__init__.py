@@ -2,7 +2,7 @@
 
 import math
 from dataclasses import dataclass
-from typing import Dict, NamedTuple, Optional, Union
+from typing import Dict, Optional, Union
 
 from ._version import version as _version
 
@@ -48,7 +48,7 @@ class _Store:
                     prev = next_
                     next_ = self._store[next_].next_bucket
 
-                assert prev is not None  # for mypy
+                assert prev is not None  # nosec for mypy
                 self._store[prev].next_bucket = bucket
                 self._store[bucket] = _Entry(count, next_)
                 if next_ is None:
@@ -57,7 +57,7 @@ class _Store:
     def bucket_at_count(
         self, count: Union[int, float], lower: bool = True
     ) -> int:
-        assert self._tail is not None  # for mypy
+        assert self._tail is not None  # nosec for mypy
         next_ = self._head
         running_count = 0
 
@@ -68,7 +68,6 @@ class _Store:
             entry = self._store[next_]
             running_count += entry.count
             if lower and running_count >= count:
-                # (lower and running_ct > rank) or (not lower and running_ct >= rank + 1)
                 return next_
             elif not lower and running_count > count:
                 return next_
