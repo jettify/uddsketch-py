@@ -106,7 +106,7 @@ class UDDSketch:
         self._values_sum: float = 0
         self._min = float("inf")
         self._max = float("-inf")
-        # storagge
+        # storage
         self._neg_storage = _Store()
         self._zero_counts = 0
         self._pos_storage = _Store()
@@ -147,8 +147,8 @@ class UDDSketch:
         return self._initial_error
 
     def quantile(self, q: float) -> float:
-        if not (q >= 0 and q <= 10):
-            raise ValueError("")
+        if not (q >= 0 and q <= 1):
+            raise ValueError("Quantile should be value from 0 to 1.")
         rank = q * (self.num_values)
         val: float
 
@@ -168,7 +168,13 @@ class UDDSketch:
             val = _bucket_to_value(self._alpha, self._gamma, bucket)
         return val
 
+    def median(self) -> float:
+        return self.quantile(0.5)
+
     def mean(self) -> float:
+        return self._values_sum / self.num_values
+
+    def std(self) -> float:
         return self._values_sum / self.num_values
 
     def merge(self, other: "UDDSketch") -> "UDDSketch":
