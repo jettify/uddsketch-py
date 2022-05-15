@@ -104,6 +104,7 @@ class UDDSketch:
         self._compactions = 0
 
         self._values_sum: float = 0
+        self._running_mean: float = 0
         self._min = float("inf")
         self._max = float("-inf")
         # storage
@@ -127,6 +128,13 @@ class UDDSketch:
 
     def add(self, value: float, count: int = 1) -> None:
         self._values_sum += value * count
+        # https://en.wikipedia.org/wiki/Algorithms_for_calculating_variance#Online
+        old_count = self.num_values
+        new_count = old_count + count
+        self._running_mean = (self._running_mean * old_count) / new_count + (
+            value * count
+        ) / new_count
+
         self._min = min(self._min, value)
         self._max = max(self._max, value)
 
@@ -172,7 +180,7 @@ class UDDSketch:
         return self.quantile(0.5)
 
     def mean(self) -> float:
-        return self._values_sum / self.num_values
+        return self._running_mean
 
     def std(self) -> float:
         return self._values_sum / self.num_values
