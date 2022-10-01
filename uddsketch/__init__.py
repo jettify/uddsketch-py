@@ -2,12 +2,16 @@
 
 import math
 from dataclasses import dataclass
-from typing import Dict, Optional, Union
+from typing import Callable, Dict, Optional, Union
 
 from ._version import version as _version
 
 __all__ = ("UDDSketch",)
 __version__ = _version
+
+
+def _compact_bucket(bucket: int) -> int:
+    return (bucket + 1 if bucket > 0 else bucket) // 2
 
 
 @dataclass
@@ -22,6 +26,9 @@ class _Store:
         self._head: Optional[int] = None
         self._tail: Optional[int] = None
         self._count: int = 0
+
+    def size(self) -> int:
+        return len(self._store)
 
     @property
     def num_values(self) -> int:
@@ -76,8 +83,17 @@ class _Store:
 
         return self._tail
 
-    def compact(self):
-        return
+    def compact(self, compact_fn: Callable[[int], int] = _compact_bucket):
+        if self._head is None:
+            return
+
+        old_store = self._store
+        self._store = {}
+        self._head = None
+        self._tail = None
+        self._count = 0
+        for old_bucket, entry in old_store.items():
+            self.add_to_bucket(compact_fn(old_bucket), count=entry.count)
 
 
 def _value_to_bucket(value: float, gamma: float) -> int:
@@ -89,10 +105,6 @@ def _bucket_to_value(alpha: float, gamma: float, bucket: int) -> float:
     return (1.0 + alpha) * gamma ** (bucket - 1)
 
 
-def _compact_bucket(bucket):
-    return (bucket + 1 if bucket > 0 else bucket) // 2
-
-
 class UDDSketch:
     def __init__(
         self, max_buckets: int = 256, initial_error: float = 0.01
@@ -101,16 +113,16 @@ class UDDSketch:
         self._initial_error: float = initial_error
         self._alpha: float = initial_error
         self._gamma: float = (1.0 + initial_error) / (1.0 - initial_error)
-        self._compactions = 0
+        self._compactions: int = 0
 
         self._values_sum: float = 0
         self._running_mean: float = 0
         self._min = float("inf")
         self._max = float("-inf")
         # storage
-        self._neg_storage = _Store()
-        self._zero_counts = 0
-        self._pos_storage = _Store()
+        self._neg_storage: _Store = _Store()
+        self._zero_counts: int = 0
+        self._pos_storage: _Store = _Store()
 
     def min(self):
         return self._min
@@ -152,18 +164,18 @@ class UDDSketch:
         return self._compactions
 
     def max_error(self) -> float:
-        return self._initial_error
+        return self._alpha
 
     def quantile(self, q: float) -> float:
         if not (q >= 0 and q <= 1):
             raise ValueError("Quantile should be value from 0 to 1.")
-        rank = q * (self.num_values)
+        rank = q * (self.num_values - 1)
         val: float
 
         if self._neg_storage.num_values > rank:
             reversed_rank = self._neg_storage.num_values - rank
             bucket = self._neg_storage.bucket_at_count(
-                reversed_rank, lower=False
+                reversed_rank, lower=True
             )
             val = -_bucket_to_value(self._alpha, self._gamma, bucket)
         elif self._neg_storage.num_values + self._zero_counts > rank:
@@ -172,7 +184,7 @@ class UDDSketch:
             pos_count = rank - (
                 self._neg_storage.num_values + self._zero_counts
             )
-            bucket = self._pos_storage.bucket_at_count(pos_count, lower=True)
+            bucket = self._pos_storage.bucket_at_count(pos_count, lower=False)
             val = _bucket_to_value(self._alpha, self._gamma, bucket)
         return val
 
@@ -187,3 +199,10 @@ class UDDSketch:
 
     def merge(self, other: "UDDSketch") -> "UDDSketch":
         return self
+
+    def compact(self):
+        self._neg_storage.compact()
+        self._pos_storage.compact()
+        self._gamma *= self._gamma
+        self._alpha = 2.0 * self._alpha / (1.0 + self._alpha**2)
+        self._compactions += 1
