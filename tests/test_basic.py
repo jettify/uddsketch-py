@@ -26,6 +26,19 @@ def arr(request):
     return request.param
 
 
+@pytest.fixture(
+    params=[
+        [(1.0, 1), (2.0, 1), (3.0, 1), (4.0, 1), (5.0, 1)],
+        [(1.0, 2), (2.0, 2), (3.0, 2), (4.0, 2), (5.0, 2)],
+        [(v, 1) for v in range(0, 1000)],
+        [(-v, i + 1) for i, v in enumerate(range(0, 1000))],
+    ],
+    ids=lambda v: str(v[:3]),
+)
+def arr_w(request):
+    return request.param
+
+
 @pytest.fixture(params=[0.1, 0.01, 0.001, 0.0001], ids=lambda v: f"alpha={v}")
 def alpha(request):
     return request.param
@@ -43,6 +56,22 @@ def num_compactions(request):
     return request.param
 
 
+def test_mean_var(arr_w, alpha):
+    arr = [v[0] for v in arr_w]
+    weights = [v[1] for v in arr_w]
+
+    hist = UDDSketch(initial_error=alpha)
+    [hist.add(v, c) for v, c in arr_w]
+
+    assert hist.min() == min(arr)
+    assert hist.max() == max(arr)
+    assert hist.num_values == np.sum(weights)
+    assert hist.mean() == pytest.approx(np.average(arr, weights=weights))
+    assert hist.var() == pytest.approx(
+        np.cov(arr, aweights=weights, bias=True)
+    )
+
+
 def test_quantile(arr, alpha, quantile, num_compactions):
     hist = UDDSketch(initial_error=alpha)
     [hist.add(v) for v in arr]
@@ -55,9 +84,7 @@ def test_quantile(arr, alpha, quantile, num_compactions):
     a = (expected, q)
     assert abs(expected - q) <= (hist.max_error() * abs(expected) + eps), a
     assert hist.mean() == pytest.approx(np.mean(arr))
-    assert hist.min() == min(arr)
-    assert hist.max() == max(arr)
-    assert hist.num_values == len(arr)
+    assert hist.var() == pytest.approx(np.var(arr))
 
 
 def test_median(alpha, num_compactions):

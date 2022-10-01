@@ -122,8 +122,8 @@ class UDDSketch:
         self._gamma: float = (1.0 + initial_error) / (1.0 - initial_error)
         self._compactions: int = 0
 
-        self._values_sum: float = 0
-        self._running_mean: float = 0
+        self._m: float = 0
+        self._running_var: float = 0
         self._min = float("inf")
         self._max = float("-inf")
         # storage
@@ -146,13 +146,25 @@ class UDDSketch:
         )
 
     def add(self, value: float, count: int = 1) -> None:
-        self._values_sum += value * count
         # https://en.wikipedia.org/wiki/Algorithms_for_calculating_variance#Online
-        old_count = self.num_values
-        new_count = old_count + count
-        self._running_mean = (self._running_mean * old_count) / new_count + (
+        if count <= 0:
+            return
+
+        prev_count = self.num_values
+        prev_mean = self._m
+        prev_var = self._running_var
+
+        new_count = prev_count + count
+        self._m = (prev_mean * prev_count) / new_count + (
             value * count
         ) / new_count
+
+        if prev_count == 0:
+            self._running_var = 0
+        else:
+            self._running_var = prev_var + count * (value - prev_mean) * (
+                value - self._m
+            )
 
         self._min = min(self._min, value)
         self._max = max(self._max, value)
@@ -199,10 +211,10 @@ class UDDSketch:
         return self.quantile(0.5)
 
     def mean(self) -> float:
-        return self._running_mean
+        return self._m
 
-    def std(self) -> float:
-        return self._values_sum / self.num_values
+    def var(self) -> float:
+        return self._running_var / self.num_values
 
     def merge(self, other: "UDDSketch") -> "UDDSketch":
         return self
