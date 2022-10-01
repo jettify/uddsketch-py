@@ -1,3 +1,5 @@
+import math
+
 import numpy as np
 import pytest
 
@@ -77,6 +79,7 @@ def test_quantile(arr, alpha, quantile, num_compactions):
     [hist.add(v) for v in arr]
     for _ in range(num_compactions):
         hist.compact()
+    assert hist.num_compactions == num_compactions
 
     expected = np.quantile(arr, quantile, method="lower")
     q = hist.quantile(quantile)
@@ -96,7 +99,7 @@ def test_median(alpha, num_compactions):
 
     expected = np.quantile(arr, 0.5, method="lower")
     q = hist.quantile(0.5)
-    median = hist.quantile(0.5)
+    median = hist.median()
     assert q == pytest.approx(median)
     eps = np.finfo(float).eps
     assert abs(expected - q) <= (hist.max_error() * abs(expected) + eps)
@@ -109,3 +112,14 @@ def test_value_to_bucket_bucket_to_value(alpha, value):
     b = _value_to_bucket(value, gamma)
     val = _bucket_to_value(alpha, gamma, b)
     assert val == pytest.approx(value, rel=alpha)
+
+
+def test_empty():
+    hist = UDDSketch(initial_error=0.1)
+    assert math.isinf(hist.min())
+    assert math.isinf(hist.max())
+    assert hist.num_values == 0
+    assert math.isnan(hist.mean())
+    assert math.isnan(hist.var())
+    assert math.isnan(hist.median())
+    assert math.isnan(hist.quantile(0.1))

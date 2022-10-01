@@ -123,7 +123,7 @@ class UDDSketch:
         self._compactions: int = 0
 
         self._m: float = 0
-        self._running_var: float = 0
+        self._var: float = float("nan")
         self._min = float("inf")
         self._max = float("-inf")
         # storage
@@ -132,10 +132,10 @@ class UDDSketch:
         self._pos_storage: _Store = _Store()
 
     def min(self) -> float:
-        return self._min
+        return self._min if self.num_values > 0 else float("-inf")
 
     def max(self) -> float:
-        return self._max
+        return self._max if self.num_values > 0 else float("inf")
 
     @property
     def num_values(self) -> int:
@@ -152,7 +152,7 @@ class UDDSketch:
 
         prev_count = self.num_values
         prev_mean = self._m
-        prev_var = self._running_var
+        prev_var = self._var
 
         new_count = prev_count + count
         self._m = (prev_mean * prev_count) / new_count + (
@@ -160,9 +160,9 @@ class UDDSketch:
         ) / new_count
 
         if prev_count == 0:
-            self._running_var = 0
+            self._var = 0
         else:
-            self._running_var = prev_var + count * (value - prev_mean) * (
+            self._var = prev_var + count * (value - prev_mean) * (
                 value - self._m
             )
 
@@ -188,6 +188,10 @@ class UDDSketch:
     def quantile(self, q: float) -> float:
         if not (q >= 0 and q <= 1):
             raise ValueError("Quantile should be value from 0 to 1.")
+
+        if not self.num_values:
+            return float("nan")
+
         rank = q * (self.num_values - 1)
         val: float
 
@@ -211,10 +215,10 @@ class UDDSketch:
         return self.quantile(0.5)
 
     def mean(self) -> float:
-        return self._m
+        return self._m if self.num_values else float("nan")
 
     def var(self) -> float:
-        return self._running_var / self.num_values
+        return self._var / self.num_values if self.num_values else float("nan")
 
     def merge(self, other: "UDDSketch") -> "UDDSketch":
         return self
