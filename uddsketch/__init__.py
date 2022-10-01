@@ -64,9 +64,14 @@ class _Store:
     def bucket_at_count(
         self, count: Union[int, float], lower: bool = True
     ) -> int:
+        if not self._store:
+            raise RuntimeError("Bucket store is empty")
+
         assert self._tail is not None  # nosec for mypy
-        next_ = self._head
-        running_count = 0
+        assert self._head is not None  # nosec for mypy
+
+        next_: Optional[int] = self._head
+        running_count: int = 0
 
         if count >= self.num_values:
             return self._tail
@@ -83,7 +88,9 @@ class _Store:
 
         return self._tail
 
-    def compact(self, compact_fn: Callable[[int], int] = _compact_bucket):
+    def compact(
+        self, compact_fn: Callable[[int], int] = _compact_bucket
+    ) -> None:
         if self._head is None:
             return
 
@@ -124,14 +131,14 @@ class UDDSketch:
         self._zero_counts: int = 0
         self._pos_storage: _Store = _Store()
 
-    def min(self):
+    def min(self) -> float:
         return self._min
 
-    def max(self):
+    def max(self) -> float:
         return self._max
 
     @property
-    def num_values(self):
+    def num_values(self) -> int:
         return (
             self._neg_storage.num_values
             + self._pos_storage.num_values
@@ -200,7 +207,7 @@ class UDDSketch:
     def merge(self, other: "UDDSketch") -> "UDDSketch":
         return self
 
-    def compact(self):
+    def compact(self) -> None:
         self._neg_storage.compact()
         self._pos_storage.compact()
         self._gamma *= self._gamma

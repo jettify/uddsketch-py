@@ -52,20 +52,27 @@ def test_quantile(arr, alpha, quantile, num_compactions):
     expected = np.quantile(arr, quantile, method="lower")
     q = hist.quantile(quantile)
     eps = np.finfo(float).eps
-    rel = abs(expected - q) / abs(expected)
-    abs_ = abs(expected - q)
-    assert abs(expected - q) <= (hist.max_error() * abs(expected) + eps), (
-        expected,
-        q,
-        hist.max_error(),
-        rel,
-        abs_,
-    )
-
+    a = (expected, q)
+    assert abs(expected - q) <= (hist.max_error() * abs(expected) + eps), a
     assert hist.mean() == pytest.approx(np.mean(arr))
     assert hist.min() == min(arr)
     assert hist.max() == max(arr)
     assert hist.num_values == len(arr)
+
+
+def test_median(alpha, num_compactions):
+    arr = ((np.random.pareto(3.0, 1000) + 1) * 2.0).tolist()
+    hist = UDDSketch(initial_error=alpha)
+    [hist.add(v) for v in arr]
+    for _ in range(num_compactions):
+        hist.compact()
+
+    expected = np.quantile(arr, 0.5, method="lower")
+    q = hist.quantile(0.5)
+    median = hist.quantile(0.5)
+    assert q == pytest.approx(median)
+    eps = np.finfo(float).eps
+    assert abs(expected - q) <= (hist.max_error() * abs(expected) + eps)
 
 
 @pytest.mark.parametrize("value", [0.0001, 1.1, 20.0, 300.0, 4000.0, 50000.0])
