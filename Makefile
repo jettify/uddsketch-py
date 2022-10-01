@@ -23,7 +23,7 @@ bandit:
 	bandit -r ./uddsketch
 
 mypy:
-	mypy uddsketch --ignore-missing-imports
+	mypy uddsketch --strict
 
 checkbuild:
 	python setup.py sdist bdist_wheel
