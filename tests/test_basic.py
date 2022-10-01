@@ -6,39 +6,61 @@ from uddsketch import UDDSketch, _bucket_to_value, _value_to_bucket
 
 @pytest.fixture(
     params=[
-        [1, 2, 3, 4, 5],
+        [1.0, 2.0, 3.0, 4.0, 5.0],
         [0, 0, 0, 0, 0],
+        [1, 1, 1, 1, 1],
         [-1, -2, -3, -4, -5],
         [0.01 * v for v in range(0, 1000)],
         [v for v in range(0, 1000)],
         [-v for v in range(0, 1000)],
         [v for v in range(-100, 100)],
         [0.01 * v for v in range(-100, 100)],
+        [0.01 * v for v in range(100, 1000)],
+        np.random.normal(1.0, 0.1, 1000).tolist(),
+        np.random.normal(10000, 10000, 1000).tolist(),
+        ((np.random.pareto(3.0, 1000) + 1) * 2.0).tolist(),
     ],
-    ids=lambda v: str(v[:5]),
+    ids=lambda v: str(v[:3]),
 )
 def arr(request):
     return request.param
 
 
-@pytest.fixture(params=[0.1, 0.01, 0.001])
+@pytest.fixture(params=[0.1, 0.01, 0.001, 0.0001], ids=lambda v: f"alpha={v}")
 def alpha(request):
     return request.param
 
 
-@pytest.fixture(params=[0.99, 0.01])
+@pytest.fixture(
+    params=[0.01, 0.1, 0.25, 0.5, 0.75, 0.9, 0.99], ids=lambda v: f"q={v}"
+)
 def quantile(request):
     return request.param
 
 
-def test_quantile(arr, alpha, quantile):
+@pytest.fixture(params=[0], ids=lambda v: f"n={v}")
+def num_compactions(request):
+    return request.param
+
+
+def test_quantile(arr, alpha, quantile, num_compactions):
     hist = UDDSketch(initial_error=alpha)
     [hist.add(v) for v in arr]
+    for _ in range(num_compactions):
+        hist.compact()
 
-    expected = np.quantile(arr, quantile, method="closest_observation")
+    expected = np.quantile(arr, quantile, method="lower")
     q = hist.quantile(quantile)
     eps = np.finfo(float).eps
-    assert abs(q - expected) <= (alpha * abs(expected) + eps), (expected, q)
+    rel = abs(expected - q) / abs(expected)
+    abs_ = abs(expected - q)
+    assert abs(expected - q) <= (hist.max_error() * abs(expected) + eps), (
+        expected,
+        q,
+        hist.max_error(),
+        rel,
+        abs_,
+    )
 
     assert hist.mean() == pytest.approx(np.mean(arr))
     assert hist.min() == min(arr)
