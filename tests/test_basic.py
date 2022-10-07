@@ -5,6 +5,8 @@ import pytest
 
 from uddsketch import UDDSketch, _bucket_to_value, _value_to_bucket
 
+rs = np.random.RandomState(seed=42)
+
 
 @pytest.fixture(
     params=[
@@ -18,9 +20,9 @@ from uddsketch import UDDSketch, _bucket_to_value, _value_to_bucket
         [v for v in range(-100, 100)],
         [0.01 * v for v in range(-100, 100)],
         [0.01 * v for v in range(100, 1000)],
-        np.random.normal(1.0, 0.1, 1000).tolist(),
-        np.random.normal(10000, 10000, 1000).tolist(),
-        ((np.random.pareto(3.0, 1000) + 1) * 2.0).tolist(),
+        rs.normal(1.0, 0.1, 1000).tolist(),
+        rs.normal(10000, 10000, 1000).tolist(),
+        ((rs.pareto(3.0, 1000) + 1) * 2.0).tolist(),
     ],
     ids=lambda v: str(v[:3]),
 )
@@ -47,13 +49,14 @@ def alpha(request):
 
 
 @pytest.fixture(
-    params=[0.01, 0.1, 0.25, 0.5, 0.75, 0.9, 0.99], ids=lambda v: f"q={v}"
+    params=[0.005, 0.01, 0.1, 0.25, 0.5, 0.75, 0.9, 0.99],
+    ids=lambda v: f"q={v}",
 )
 def quantile(request):
     return request.param
 
 
-@pytest.fixture(params=[0], ids=lambda v: f"n={v}")
+@pytest.fixture(params=[0, 3], ids=lambda v: f"n={v}")
 def num_compactions(request):
     return request.param
 

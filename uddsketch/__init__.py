@@ -11,7 +11,7 @@ __version__ = _version
 
 
 def _compact_bucket(bucket: int) -> int:
-    return (bucket + 1 if bucket > 0 else bucket) // 2
+    return math.ceil(bucket / 2.0)
 
 
 @dataclass
@@ -48,7 +48,10 @@ class _Store:
             if self._head is not None and bucket < self._head:
                 self._store[bucket] = _Entry(count, self._head)
                 self._head = bucket
-
+            elif self._tail is not None and bucket > self._tail:
+                self._store[self._tail].next_bucket = bucket
+                self._store[bucket] = _Entry(count, None)
+                self._tail = bucket
             else:
                 prev = next_
                 while next_ is not None and bucket > next_:
