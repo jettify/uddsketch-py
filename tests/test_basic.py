@@ -61,6 +61,15 @@ def num_compactions(request):
     return request.param
 
 
+def test_ctor():
+    hist = UDDSketch(initial_error=0.1, max_buckets=128)
+    hist.add(0.1)
+    hist.add(0.2)
+    hist.add(0.3)
+    expected = "<UDDSketch min=0.1000 max=0.3000 mean=0.2000 var=0.0067>"
+    assert repr(hist) == expected
+
+
 def test_mean_var(arr_w, alpha):
     arr = [v[0] for v in arr_w]
     weights = [v[1] for v in arr_w]

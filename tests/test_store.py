@@ -8,18 +8,29 @@ def test_basic():
     s.add_to_bucket(2)
     assert s._head == 2
     assert s._tail == 2
+    assert s.buckets() == [(2, 1)]
 
     s.add_to_bucket(3)
     assert s._head == 2
     assert s._tail == 3
+    assert s.buckets() == [(2, 1), (3, 1)]
 
     s.add_to_bucket(4)
     assert s._head == 2
     assert s._tail == 4
+    assert s.buckets() == [(2, 1), (3, 1), (4, 1)]
 
     s.add_to_bucket(1)
     assert s._head == 1
     assert s._tail == 4
+    assert s.buckets() == [(1, 1), (2, 1), (3, 1), (4, 1)]
+
+    s.add_to_bucket(2)
+    assert s._head == 1
+    assert s._tail == 4
+    assert s.buckets() == [(1, 1), (2, 2), (3, 1), (4, 1)]
+
+    assert repr(s) == "<_Store [(1, 1), (2, 2), (3, 1), (4, 1)]>"
 
 
 def test_bucket_at_count():

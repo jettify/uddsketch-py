@@ -2,7 +2,7 @@
 
 import math
 from dataclasses import dataclass
-from typing import Callable, Dict, Optional, Union
+from typing import Callable, Dict, List, Optional, Tuple, Union
 
 from ._version import version as _version
 
@@ -27,8 +27,16 @@ class _Store:
         self._tail: Optional[int] = None
         self._count: int = 0
 
+    def __repr__(self) -> str:
+        klass = self.__class__.__name__
+        return f"<{klass} {self.buckets()}>"
+
     def size(self) -> int:
         return len(self._store)
+
+    def buckets(self) -> List[Tuple[float, int]]:
+        bucket_counts = sorted(self._store.items(), key=lambda v: v[0])
+        return [(k, v.count) for k, v in bucket_counts]
 
     @property
     def num_values(self) -> int:
@@ -133,6 +141,14 @@ class UDDSketch:
         self._neg_storage: _Store = _Store()
         self._zero_counts: int = 0
         self._pos_storage: _Store = _Store()
+
+    def __repr__(self) -> str:
+        klass = self.__class__.__name__
+        t = (
+            f"<{klass} min={self.min():.4f} max={self.max():.4f} "
+            f"mean={self.mean():.4f} var={self.var():.4f}>"
+        )
+        return t
 
     def min(self) -> float:
         return self._min if self.num_values > 0 else float("-inf")
