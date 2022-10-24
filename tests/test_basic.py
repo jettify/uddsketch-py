@@ -108,7 +108,6 @@ def test_median(alpha, num_compactions):
     [hist.add(v) for v in arr]
     for _ in range(num_compactions):
         hist.compact()
-
     expected = np.quantile(arr, 0.5, method="lower")
     q = hist.quantile(0.5)
     median = hist.median()
@@ -128,6 +127,7 @@ def test_value_to_bucket_bucket_to_value(alpha, value):
 
 def test_empty():
     hist = UDDSketch(initial_error=0.1)
+    assert hist.num_values == 0
     assert math.isinf(hist.min())
     assert math.isinf(hist.max())
     assert hist.num_values == 0
@@ -135,3 +135,17 @@ def test_empty():
     assert math.isnan(hist.var())
     assert math.isnan(hist.median())
     assert math.isnan(hist.quantile(0.1))
+
+    hist.add(42.0, 0)
+    assert hist.num_values == 0
+
+
+def test_buckets():
+    hist = UDDSketch(initial_error=0.1)
+    hist.add(-1.0)
+    assert hist.buckets() == [(-0.9, 1)]
+
+    hist.add(0.0)
+    assert hist.buckets() == [(-0.9, 1), (0.0, 1)]
+    hist.add(1.0)
+    assert hist.buckets() == [(-0.9, 1), (0.0, 1), (0.9, 1)]
