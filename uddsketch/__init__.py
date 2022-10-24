@@ -20,6 +20,9 @@ class _Entry:
     next_bucket: Optional[int]
 
 
+Centroid = Tuple[float, int]
+
+
 class _Store:
     def __init__(self) -> None:
         self._store: Dict[int, _Entry] = {}
@@ -34,7 +37,7 @@ class _Store:
     def size(self) -> int:
         return len(self._store)
 
-    def buckets(self) -> List[Tuple[float, int]]:
+    def buckets(self) -> List[Tuple[int, int]]:
         bucket_counts = sorted(self._store.items(), key=lambda v: v[0])
         return [(k, v.count) for k, v in bucket_counts]
 
@@ -149,6 +152,18 @@ class UDDSketch:
             f"mean={self.mean():.4f} var={self.var():.4f}>"
         )
         return t
+
+    def buckets(self) -> List[Centroid]:
+        neg = [
+            (-_bucket_to_value(self._alpha, self._gamma, b), c)
+            for b, c in self._neg_storage.buckets()
+        ]
+        zero = [(0.0, self._zero_counts)] if self._zero_counts else []
+        pos = [
+            (_bucket_to_value(self._alpha, self._gamma, b), c)
+            for b, c in self._pos_storage.buckets()
+        ]
+        return neg + zero + pos
 
     def min(self) -> float:
         return self._min if self.num_values > 0 else float("-inf")
