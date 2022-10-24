@@ -128,9 +128,9 @@ def _bucket_to_value(alpha: float, gamma: float, bucket: int) -> float:
 
 class UDDSketch:
     def __init__(
-        self, max_buckets: int = 256, initial_error: float = 0.01
+        self, max_buckets: Optional[int] = None, initial_error: float = 0.01
     ) -> None:
-        self._max_buckets: int = max_buckets
+        self._max_buckets: Optional[int] = max_buckets
         self._initial_error: float = initial_error
         self._alpha: float = initial_error
         self._gamma: float = (1.0 + initial_error) / (1.0 - initial_error)
@@ -152,6 +152,12 @@ class UDDSketch:
             f"mean={self.mean():.4f} var={self.var():.4f}>"
         )
         return t
+
+    def num_buckets(self) -> int:
+        num_buckets = self._neg_storage.size() + self._pos_storage.size()
+        if self._zero_counts != 0:
+            num_buckets += 1
+        return num_buckets
 
     def buckets(self) -> List[Centroid]:
         neg = [
@@ -211,6 +217,12 @@ class UDDSketch:
             self._neg_storage.add_to_bucket(bucket, count=count)
         else:
             self._zero_counts += count
+
+        if self._max_buckets is None:
+            return
+
+        while self.num_buckets() > self._max_buckets:
+            self.compact()
 
     @property
     def num_compactions(self) -> int:

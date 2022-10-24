@@ -61,6 +61,11 @@ def num_compactions(request):
     return request.param
 
 
+@pytest.fixture(params=[6, 42], ids=lambda v: f"seed={v}")
+def rng(request):
+    return np.random.RandomState(seed=request.param)
+
+
 def test_ctor():
     hist = UDDSketch(initial_error=0.1, max_buckets=128)
     hist.add(0.1)
@@ -102,8 +107,8 @@ def test_quantile(arr, alpha, quantile, num_compactions):
     assert hist.var() == pytest.approx(np.var(arr))
 
 
-def test_median(alpha, num_compactions):
-    arr = ((np.random.pareto(3.0, 1000) + 1) * 2.0).tolist()
+def test_median(alpha, num_compactions, rng):
+    arr = ((rng.pareto(3.0, 1000) + 1) * 2.0).tolist()
     hist = UDDSketch(initial_error=alpha)
     [hist.add(v) for v in arr]
     for _ in range(num_compactions):
@@ -149,3 +154,13 @@ def test_buckets():
     assert hist.buckets() == [(-0.9, 1), (0.0, 1)]
     hist.add(1.0)
     assert hist.buckets() == [(-0.9, 1), (0.0, 1), (0.9, 1)]
+
+
+def test_auto_compaction(rng):
+    arr = ((rng.pareto(3.0, 1000) + 1) * 2.0).tolist()
+    max_buckets = 10
+    hist = UDDSketch(max_buckets=10, initial_error=0.01)
+    for v in arr:
+        hist.add(v)
+        assert hist.num_buckets() <= max_buckets
+    assert hist.num_compactions == 4
