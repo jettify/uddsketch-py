@@ -71,11 +71,11 @@ def test_ctor():
     hist.add(0.1)
     hist.add(0.2)
     hist.add(0.3)
-    expected = "<UDDSketch min=0.1000 max=0.3000 mean=0.2000 var=0.0067>"
+    expected = "<UDDSketch min=0.1000 max=0.3000>"
     assert repr(hist) == expected
 
 
-def test_mean_var(arr_w, alpha):
+def test_min_max(arr_w, alpha):
     arr = [v[0] for v in arr_w]
     weights = [v[1] for v in arr_w]
 
@@ -85,10 +85,6 @@ def test_mean_var(arr_w, alpha):
     assert hist.min() == min(arr)
     assert hist.max() == max(arr)
     assert hist.num_values == np.sum(weights)
-    assert hist.mean() == pytest.approx(np.average(arr, weights=weights))
-    assert hist.var() == pytest.approx(
-        np.cov(arr, aweights=weights, bias=True)
-    )
 
 
 def test_quantile(arr, alpha, quantile, num_compactions):
@@ -103,8 +99,6 @@ def test_quantile(arr, alpha, quantile, num_compactions):
     eps = np.finfo(float).eps
     a = (expected, q)
     assert abs(expected - q) <= (hist.max_error() * abs(expected) + eps), a
-    assert hist.mean() == pytest.approx(np.mean(arr))
-    assert hist.var() == pytest.approx(np.var(arr))
 
 
 def test_median(alpha, num_compactions, rng):
@@ -136,8 +130,6 @@ def test_empty():
     assert math.isinf(hist.min())
     assert math.isinf(hist.max())
     assert hist.num_values == 0
-    assert math.isnan(hist.mean())
-    assert math.isnan(hist.var())
     assert math.isnan(hist.median())
     assert math.isnan(hist.quantile(0.1))
 

@@ -136,8 +136,6 @@ class UDDSketch:
         self._gamma: float = (1.0 + initial_error) / (1.0 - initial_error)
         self._compactions: int = 0
 
-        self._m: float = 0
-        self._var: float = float("nan")
         self._min = float("inf")
         self._max = float("-inf")
         # storage
@@ -147,10 +145,7 @@ class UDDSketch:
 
     def __repr__(self) -> str:
         klass = self.__class__.__name__
-        t = (
-            f"<{klass} min={self.min():.4f} max={self.max():.4f} "
-            f"mean={self.mean():.4f} var={self.var():.4f}>"
-        )
+        t = f"<{klass} min={self.min():.4f} max={self.max():.4f}>"
         return t
 
     def num_buckets(self) -> int:
@@ -189,22 +184,6 @@ class UDDSketch:
         # https://en.wikipedia.org/wiki/Algorithms_for_calculating_variance#Online
         if count <= 0:
             return
-
-        prev_count = self.num_values
-        prev_mean = self._m
-        prev_var = self._var
-
-        new_count = prev_count + count
-        self._m = (prev_mean * prev_count) / new_count + (
-            value * count
-        ) / new_count
-
-        if prev_count == 0:
-            self._var = 0
-        else:
-            self._var = prev_var + count * (value - prev_mean) * (
-                value - self._m
-            )
 
         self._min = min(self._min, value)
         self._max = max(self._max, value)
@@ -259,12 +238,6 @@ class UDDSketch:
 
     def median(self) -> float:
         return self.quantile(0.5)
-
-    def mean(self) -> float:
-        return self._m if self.num_values else float("nan")
-
-    def var(self) -> float:
-        return self._var / self.num_values if self.num_values else float("nan")
 
     def merge(self, other: "UDDSketch") -> "UDDSketch":
         return self
