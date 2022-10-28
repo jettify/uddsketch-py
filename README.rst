@@ -15,7 +15,9 @@ uddsketch
     :alt: Documentation Status
 
 
-**uddsketch** data structure.
+**uddsketch** data structure for fast and accurate tracking of quantiles in
+data streams. Implantation is based on ideas described in  DDSketch_ and
+UDDSketch_ papers.
 
 
 Simple example
@@ -27,10 +29,19 @@ Simple example
 
     hist = UDDSketch(initial_error=0.01)
 
+    # Populate structure with dummy data
     for i in range(0, 100):
         hist.add(0.1 * i)
-    q = hist.quantile(0.5)
-    print('quantile: {}'.format(q))
+
+    # Estimate p95 percentile
+    q = hist.quantile(0.95)
+    print(f"quantie: {q}")
+    # quantie: 9.487973051696695
+
+    # Estimate median
+    m = hist.median()
+    print(f"median: {m}")
+    # median: 4.903763642930295
 
 
 Installation
@@ -38,3 +49,17 @@ Installation
 Installation process is simple, just::
 
     $ pip install uddsketch
+
+
+References
+----------
+
+1. Charles Masson, Jee E. Rim and Homin K. Lee. *DDSketch: a fast and fully-mergeable quantile sketch
+with relative-error guarantees.* [https://www.vldb.org/pvldb/vol12/p2195-masson.pdf]
+
+2. I. Epicoco, C. Melle, M. Cafaro, M. Pulimeno and G. Morleo. *UDDSketch: Accurate Tracking of
+Quantiles in Data Streams.* [https://arxiv.org/abs/2004.08604]
+
+
+.. _DDSketch: https://www.vldb.org/pvldb/vol12/p2195-masson.pdf
+.. _UDDSketch: https://arxiv.org/abs/2004.08604
