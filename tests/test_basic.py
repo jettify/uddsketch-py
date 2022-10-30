@@ -137,15 +137,33 @@ def test_empty():
     assert hist.num_values == 0
 
 
+def test_errors():
+    hist = UDDSketch(initial_error=0.1)
+    hist.add(-1.0)
+    hist.add(0.0)
+    hist.add(1.0)
+
+    with pytest.raises(ValueError):
+        hist.quantile(-1)
+
+    with pytest.raises(ValueError):
+        hist.quantile(2)
+
+    assert hist.median() == pytest.approx(0.0)
+
+
 def test_buckets():
     hist = UDDSketch(initial_error=0.1)
     hist.add(-1.0)
     assert hist.buckets() == [(-0.9, 1)]
+    assert hist.num_buckets() == 1
 
     hist.add(0.0)
     assert hist.buckets() == [(-0.9, 1), (0.0, 1)]
+    assert hist.num_buckets() == 2
     hist.add(1.0)
     assert hist.buckets() == [(-0.9, 1), (0.0, 1), (0.9, 1)]
+    assert hist.num_buckets() == 3
 
 
 def test_auto_compaction(rng):
