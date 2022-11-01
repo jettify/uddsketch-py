@@ -71,19 +71,16 @@ def test_ctor():
     hist.add(0.1)
     hist.add(0.2)
     hist.add(0.3)
-    expected = "<UDDSketch min=0.1000 max=0.3000>"
+    expected = "<UDDSketch initial_error=0.1 max_buckets=128 num_values=3>"
     assert repr(hist) == expected
 
 
-def test_min_max(arr_w, alpha):
-    arr = [v[0] for v in arr_w]
+def test_weighted_sample(arr_w, alpha):
     weights = [v[1] for v in arr_w]
 
     hist = UDDSketch(initial_error=alpha)
     [hist.add(v, c) for v, c in arr_w]
 
-    assert hist.min() == min(arr)
-    assert hist.max() == max(arr)
     assert hist.num_values == np.sum(weights)
 
 
@@ -98,7 +95,7 @@ def test_quantile(arr, alpha, quantile, num_compactions):
     q = hist.quantile(quantile)
     eps = np.finfo(float).eps
     a = (expected, q)
-    assert abs(expected - q) <= (hist.max_error() * abs(expected) + eps), a
+    assert abs(expected - q) <= (hist.max_error * abs(expected) + eps), a
 
 
 def test_median(alpha, num_compactions, rng):
@@ -112,7 +109,7 @@ def test_median(alpha, num_compactions, rng):
     median = hist.median()
     assert q == pytest.approx(median)
     eps = np.finfo(float).eps
-    assert abs(expected - q) <= (hist.max_error() * abs(expected) + eps)
+    assert abs(expected - q) <= (hist.max_error * abs(expected) + eps)
 
 
 @pytest.mark.parametrize("value", [0.0001, 1.1, 20.0, 300.0, 4000.0, 50000.0])
@@ -127,8 +124,6 @@ def test_value_to_bucket_bucket_to_value(alpha, value):
 def test_empty():
     hist = UDDSketch(initial_error=0.1)
     assert hist.num_values == 0
-    assert math.isinf(hist.min())
-    assert math.isinf(hist.max())
     assert hist.num_values == 0
     assert math.isnan(hist.median())
     assert math.isnan(hist.quantile(0.1))
@@ -156,14 +151,14 @@ def test_buckets():
     hist = UDDSketch(initial_error=0.1)
     hist.add(-1.0)
     assert hist.buckets() == [(-0.9, 1)]
-    assert hist.num_buckets() == 1
+    assert hist.num_buckets == 1
 
     hist.add(0.0)
     assert hist.buckets() == [(-0.9, 1), (0.0, 1)]
-    assert hist.num_buckets() == 2
+    assert hist.num_buckets == 2
     hist.add(1.0)
     assert hist.buckets() == [(-0.9, 1), (0.0, 1), (0.9, 1)]
-    assert hist.num_buckets() == 3
+    assert hist.num_buckets == 3
 
 
 def test_auto_compaction(rng):
@@ -172,5 +167,5 @@ def test_auto_compaction(rng):
     hist = UDDSketch(max_buckets=10, initial_error=0.01)
     for v in arr:
         hist.add(v)
-        assert hist.num_buckets() <= max_buckets
+        assert hist.num_buckets <= max_buckets
     assert hist.num_compactions == 4

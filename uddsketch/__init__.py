@@ -136,23 +136,50 @@ class UDDSketch:
         self._gamma: float = (1.0 + initial_error) / (1.0 - initial_error)
         self._compactions: int = 0
 
-        self._min = float("inf")
-        self._max = float("-inf")
         # storage
         self._neg_storage: _Store = _Store()
         self._zero_counts: int = 0
         self._pos_storage: _Store = _Store()
 
-    def __repr__(self) -> str:
-        klass = self.__class__.__name__
-        t = f"<{klass} min={self.min():.4f} max={self.max():.4f}>"
-        return t
+    @property
+    def initial_error(self) -> float:
+        return self._initial_error
 
+    @property
+    def max_buckets(self) -> Optional[int]:
+        return self._max_buckets
+
+    @property
+    def num_values(self) -> int:
+        return (
+            self._neg_storage.num_values
+            + self._pos_storage.num_values
+            + self._zero_counts
+        )
+
+    @property
+    def num_compactions(self) -> int:
+        return self._compactions
+
+    @property
+    def max_error(self) -> float:
+        return self._alpha
+
+    @property
     def num_buckets(self) -> int:
         num_buckets = self._neg_storage.size() + self._pos_storage.size()
         if self._zero_counts != 0:
             num_buckets += 1
         return num_buckets
+
+    def __repr__(self) -> str:
+        klass = self.__class__.__name__
+        t = (
+            f"<{klass} initial_error={self.initial_error} "
+            f"max_buckets={self.max_buckets} "
+            f"num_values={self.num_values}>"
+        )
+        return t
 
     def buckets(self) -> List[Centroid]:
         neg = [
@@ -166,27 +193,9 @@ class UDDSketch:
         ]
         return neg + zero + pos
 
-    def min(self) -> float:
-        return self._min if self.num_values > 0 else float("-inf")
-
-    def max(self) -> float:
-        return self._max if self.num_values > 0 else float("inf")
-
-    @property
-    def num_values(self) -> int:
-        return (
-            self._neg_storage.num_values
-            + self._pos_storage.num_values
-            + self._zero_counts
-        )
-
     def add(self, value: float, count: int = 1) -> None:
-        # https://en.wikipedia.org/wiki/Algorithms_for_calculating_variance#Online
         if count <= 0:
             return
-
-        self._min = min(self._min, value)
-        self._max = max(self._max, value)
 
         if value > 0.0:
             bucket = _value_to_bucket(value, self._gamma)
@@ -200,15 +209,8 @@ class UDDSketch:
         if self._max_buckets is None:
             return
 
-        while self.num_buckets() > self._max_buckets:
+        while self.num_buckets > self._max_buckets:
             self.compact()
-
-    @property
-    def num_compactions(self) -> int:
-        return self._compactions
-
-    def max_error(self) -> float:
-        return self._alpha
 
     def quantile(self, q: float) -> float:
         if not (q >= 0 and q <= 1):
