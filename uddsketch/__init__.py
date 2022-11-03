@@ -1,6 +1,7 @@
 # coding: utf-8
 
 import math
+from copy import deepcopy
 from dataclasses import dataclass
 from typing import Callable, Dict, List, Optional, Tuple, Union
 
@@ -242,6 +243,45 @@ class UDDSketch:
         return self.quantile(0.5)
 
     def merge(self, other: "UDDSketch") -> "UDDSketch":
+        if self._initial_error != other.initial_error:
+            msg = (
+                f"Expected initial_error is {self._initial_error} "
+                f"got {other.initial_error}"
+            )
+            raise ValueError(msg)
+
+        if self._max_buckets != other.max_buckets:
+            msg = (
+                f"Expected max_buckets is {self._max_buckets} "
+                f"got {other.max_buckets}"
+            )
+            raise ValueError(msg)
+
+        if other.num_values == 0:
+            return self
+
+        if self.num_values == 0:
+            self._neg_storage = deepcopy(other._neg_storage)
+            self._zero_counts = other._zero_counts
+            self._pos_storage = deepcopy(other._pos_storage)
+            return self
+
+        if self.num_compactions < other.num_compactions:
+            for _ in range(self.num_compactions, other.num_compactions):
+                self.compact()
+
+        if other.num_compactions < self.num_compactions:
+            other = deepcopy(other)
+            for _ in range(other.num_compactions, self.num_compactions):
+                other.compact()
+
+        for b, c in other._neg_storage.buckets():
+            self._neg_storage.add_to_bucket(b, count=c)
+
+        self._zero_counts += other._zero_counts
+
+        for b, c in other._pos_storage.buckets():
+            self._pos_storage.add_to_bucket(b, count=c)
         return self
 
     def compact(self) -> None:
