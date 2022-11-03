@@ -84,18 +84,24 @@ def test_weighted_sample(arr_w, alpha):
     assert hist.num_values == np.sum(weights)
 
 
-def test_quantile(arr, alpha, quantile, num_compactions):
-    hist = UDDSketch(initial_error=alpha)
-    [hist.add(v) for v in arr]
+def test_quantile_with_merge(arr, alpha, quantile, num_compactions):
+    hist1 = UDDSketch(initial_error=alpha)
+    hist2 = UDDSketch(initial_error=alpha)
+    mid = len(arr) // 2
+
+    [hist1.add(v) for v in arr[mid:]]
+    [hist2.add(v) for v in arr[:mid]]
+
     for _ in range(num_compactions):
-        hist.compact()
-    assert hist.num_compactions == num_compactions
+        hist1.compact()
+
+    hist1.merge(hist2)
 
     expected = np.quantile(arr, quantile, method="lower")
-    q = hist.quantile(quantile)
+    q = hist1.quantile(quantile)
     eps = np.finfo(float).eps
     a = (expected, q)
-    assert abs(expected - q) <= (hist.max_error * abs(expected) + eps), a
+    assert abs(expected - q) <= (hist1.max_error * abs(expected) + eps), a
 
 
 def test_median(alpha, num_compactions, rng):
@@ -169,3 +175,52 @@ def test_auto_compaction(rng):
         hist.add(v)
         assert hist.num_buckets <= max_buckets
     assert hist.num_compactions == 4
+
+
+def test_merge_error():
+    hist1 = UDDSketch(initial_error=0.1)
+    hist2 = UDDSketch(initial_error=0.2)
+    with pytest.raises(ValueError):
+        hist1.merge(hist2)
+
+    hist1 = UDDSketch(initial_error=0.1, max_buckets=128)
+    hist2 = UDDSketch(initial_error=0.1, max_buckets=256)
+    with pytest.raises(ValueError):
+        hist1.merge(hist2)
+
+
+def test_merge_same_compaction_level():
+    hist1 = UDDSketch(initial_error=0.1)
+    hist1.add(-1.0)
+    hist1.add(0.0)
+    hist1.add(1.0)
+
+    hist2 = UDDSketch(initial_error=0.1)
+    hist2.add(-2.0)
+    hist2.add(0.0)
+    hist2.add(2.0)
+    hist2.compact()
+    expected_count = hist1.num_values + hist2.num_values
+
+    result = hist1.merge(hist2)
+    assert hist1.num_values == expected_count
+    assert result is hist1
+
+
+def test_one_empty():
+    hist1 = UDDSketch(initial_error=0.1)
+    hist2 = UDDSketch(initial_error=0.1)
+
+    hist1.add(1.0)
+    assert hist1.num_values == 1
+    hist1.merge(hist2)
+    assert hist1.num_values == 1
+
+    hist1 = UDDSketch(initial_error=0.1)
+    hist2 = UDDSketch(initial_error=0.1)
+
+    hist2.add(1.0)
+
+    hist1.merge(hist2)
+
+    assert hist1.num_values == 1
