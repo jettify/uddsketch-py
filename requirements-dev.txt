@@ -10,7 +10,7 @@ flake8==5.0.4
 ipdb==0.13.9
 isort==5.10.1
 matplotlib==3.6.2
-mypy==0.990
+mypy==0.991
 numpy==1.23.4
 pep8-naming==0.13.2
 pyroma==4.0
