@@ -77,7 +77,7 @@ class _Store:
                     self._tail = bucket
 
     def bucket_at_count(
-        self, count: Union[int, float], lower: bool = True
+        self, count: Union[int, float], *, lower: bool = True
     ) -> int:
         if not self._store:
             raise RuntimeError("Bucket store is empty")
