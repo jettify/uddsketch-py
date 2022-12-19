@@ -8,7 +8,7 @@ flake8-builtins==2.0.1
 flake8-comprehensions==3.10.1
 flake8==6.0.0
 ipdb==0.13.9
-isort==5.10.1
+isort==5.11.3
 matplotlib==3.6.2
 mypy==0.991
 numpy==1.23.5
