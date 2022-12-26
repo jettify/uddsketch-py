@@ -12,7 +12,7 @@ isort==5.10.1
 matplotlib==3.6.2
 mypy==0.991
 numpy==1.23.5
-pep8-naming==0.13.2
+pep8-naming==0.13.3
 pyroma==4.1
 pytest-cov==4.0.0
 pytest==7.2.0
