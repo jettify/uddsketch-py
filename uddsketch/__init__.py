@@ -1,9 +1,7 @@
-# coding: utf-8
-
 import math
 from copy import deepcopy
 from dataclasses import dataclass
-from typing import Callable, Dict, List, Optional, Tuple, Union
+from typing import Dict, List, Optional, Tuple, Union
 
 from ._version import version as _version
 
@@ -103,9 +101,7 @@ class _Store:
 
         return self._tail
 
-    def compact(
-        self, compact_fn: Callable[[int], int] = _compact_bucket
-    ) -> None:
+    def compact(self) -> None:
         if self._head is None:
             return
 
@@ -115,7 +111,7 @@ class _Store:
         self._tail = None
         self._count = 0
         for old_bucket, entry in old_store.items():
-            self.add_to_bucket(compact_fn(old_bucket), count=entry.count)
+            self.add_to_bucket(_compact_bucket(old_bucket), count=entry.count)
 
 
 def _value_to_bucket(value: float, gamma: float) -> int:
